@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta charset="UTF-8" />
+    
+    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.1/dist/mindar-image-aframe.prod.js"></script>
+    
+    <title>Smartify - Vincent van Gogh | A Wheatfield, with Cypresses</title>
+    
+    <script>
+        AFRAME.registerComponent("ar-controller", {
+            init: function () {
+                const target = document.getElementById("target");
+                const video = document.getElementById("video");
+                const plane = document.getElementById("videooverlay");
+                const div = document.getElementById("div");
+                var played = false;
+              
+                // detect target found
+                target.addEventListener("targetFound", event => {
+                    console.log("target found");
+                    this.found = true;
+                    if(!played){
+                        plane.emit('fadein');
+                        video.play();
+                        video.addEventListener('ended', videoend, false);
+                        function videoend(e) {
+                            played = true;
+                            
+                        }
+                    }
+                  // Lock position of video plane
+                plane.setAttribute('position', plane.getAttribute('position'));    
+                });
+                
+                // detect target lost
+                target.addEventListener("targetLost", event => {
+                    console.log("target lost");
+                    this.found = false
+                    if(!played)
+                        video.pause();
+                  // Unlock position of video plane
+                // plane.removeAttribute('position');
+                });
+            }
+        })
+    </script>
+</head>
+
+<body>
+    <a-scene 
+        mindar-image="imageTargetSrc: .\Assets\VGtargets.mind; warmupTolerance: 10; missTolerance: 1; filterMinCF: 0.0001; filterBeta: 0.001"
+        color-space="sRGB" 
+        renderer="colorManagement: true, physicallyCorrectLights" 
+        vr-mode-ui="enabled: false"
+        device-orientation-permission-ui="enabled: false"
+  
+
+        <a-assets>
+            
+            
+
+            <video id="video" preload="auto" response-type="arraybuffer" loop
+                crossorigin="anonymous" webkit-playsinline autoplay muted playsinline>
+                
+                <source src=".\Assets\VG_Wip2.mp4" type="video/mp4" >
+            </video>
+        </a-assets>
+
+        <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+        <a-light type="ambient" color="#FFF"></a-light>
+        <a-entity id="target" mindar-image-target="targetIndex: 0" ar-controller smooth-position="target: #videooverlay; factor: 0.1">
+            
+            <a-plane id="videooverlay" height="1" width="1" position="-0 0 0" 
+                     material="src: #video; opacity: 0; transparent: false; alphaTest: 0.5"
+                     animation__fadein="startEvents: fadein; property: material.opacity; from: 0; to: 1; dur: 500;"
+                     animation__fadeout="startEvents: fadeout; property: material.opacity; from: 1; to: 0; dur: 500;"></a-plane>
+            
+        </a-entity>
+    </a-scene>
+</body>
+
+</html>
