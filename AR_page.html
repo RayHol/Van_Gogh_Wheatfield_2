@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta charset="UTF-8" />
+
+    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.1/dist/mindar-image-aframe.prod.js"></script>
+
+    <title>Smartify - Vincent van Gogh | A Wheatfield, with Cypresses</title>
+
+    <style>
+        #startText, #audioPrompt {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            width: 80%;
+            color: #fff;
+            font-size: 2em;
+            z-index: 10;
+            text-shadow: 2px 2px #000;
+            display: none; /* initially hide the text */
+        }
+
+        #audioPrompt {
+            display: none;
+            top: 80%;
+        }
+
+        #audioPrompt button {
+            display: block;
+            margin: 0 auto;
+            padding: 10px 20px;
+            background-color: #fff;
+            color: #000;
+            border: none;
+            border-radius: 5px;
+            font-size: 1em;
+            cursor: pointer;
+        }
+
+        #background {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        width: 70%;
+        height:70%;
+        transform: translate(-50%, -50%);
+        z-index: 9;
+        background: url('https://cdn.glitch.global/a6e1b164-bc55-460b-a067-0b390aabea4a/WheatfieldSM.png?v=1687337747497') no-repeat center center fixed; 
+        background-size: contain;
+        opacity: 0.5;
+        display: none; /* initially hide the background */
+        }
+
+        /* New styles for the back button */
+        #backButton {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background-color: #000;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            font-size: 1em;
+            cursor: pointer;
+            z-index: 11; /* Ensure the button is always on top */
+        }
+    </style>
+
+    <script>
+        AFRAME.registerComponent("ar-controller", {
+            init: function () {
+                const target = document.getElementById("target");
+                const video = document.getElementById("video");
+                const audio = document.getElementById("backgroundAudio");
+                const plane = document.getElementById("videooverlay");
+                const startText = document.getElementById("startText");
+                const audioPrompt = document.getElementById("audioPrompt");
+                const backgroundImage = document.getElementById("background");
+                var played = false;
+                var userInteracted = false;
+
+                // function to check if the script is running on an iOS device
+                function isIOS() {
+                    return [
+                        'iPad Simulator',
+                        'iPhone Simulator',
+                        'iPod Simulator',
+                        'iPad',
+                        'iPhone',
+                        'iPod'
+                    ].includes(navigator.platform)
+                    || (navigator.userAgent.includes("Mac") && "ontouchend" in document)
+                }
+
+                // Play audio on button click
+                audioPrompt.addEventListener("click", () => {
+                    audio.play();
+                    audioPrompt.style.display = "none";
+                    userInteracted = true;
+                });
+
+                // detect target found
+                target.addEventListener("targetFound", () => {
+                    console.log("target found");
+                    this.found = true;
+                    if (!played) {
+                        startText.style.display = "none";
+                        backgroundImage.style.display = "none";
+                        if (audio.paused && isIOS() && !userInteracted) {
+                            audioPrompt.style.display = "block";
+                        } else {
+                            audio.play();
+                        }
+                        plane.emit("fadein");
+                        video.play();
+                        video.addEventListener("ended", function videoend(e) {
+                            played = true;
+                        }, false);
+                        // Lock position of video plane
+                        plane.object3D.position.copy(plane.object3D.position);
+                    } else if (audio.paused) {
+                        audio.play();
+                    }
+                });
+
+                // detect target lost
+                target.addEventListener("targetLost", () => {
+                    console.log("target lost");
+                    this.found = false;
+                    if (!played) {
+                        video.pause();
+                        audio.pause();
+                        startText.style.display = "block";
+                        backgroundImage.style.display = "block";
+                    }
+                });
+
+                // handle frame updates
+                this.el.addEventListener("arframe", () => {
+                    if (!this.found && played) {
+                        // Update video plane position when target is lost
+                        plane.object3D.position.copy(plane.object3D.position);
+                    }
+                });
+
+                // Delay appearance of the text and image
+                setTimeout(function() {
+                    startText.style.display = "block";
+                    backgroundImage.style.display = "block";
+                }, 3000);  // Delay of 3000ms (3 seconds)
+            },
+        });
+    </script>
+</head>
+
+<body>
+    <div id="background"></div>
+    <div id="startText">Please point the camera at the painting to start the AR experience.</div>
+    <div id="audioPrompt">
+        <button id="audioButton">Tap to start audio</button>
+    </div>
+
+    <!-- New back button -->
+    <button id="backButton" onclick="location.href='index.html';">Back to Home</button>
+
+    <a-scene
+        mindar-image="imageTargetSrc: .\Assets\VGtargets.mind; warmupTolerance: 10; missTolerance: 1; filterMinCF: 0.0001; filterBeta: 0.001"
+        color-space="sRGB"
+        renderer="colorManagement: true, physicallyCorrectLights"
+        vr-mode-ui="enabled: false"
+        device-orientation-permission-ui="enabled: false"
+    >
+        <a-assets>
+            <video id="video" src=".\Assets\VG_Wip2.mp4" preload="auto" response-type="arraybuffer" loop
+                crossorigin="anonymous" webkit-playsinline autoplay muted playsinline>
+            </video>
+            <audio id="backgroundAudio" src=".\Assets\background.mp3" preload="auto" loop crossorigin="anonymous"></audio>
+        </a-assets>
+
+        <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+        <a-light type="ambient" color="#FFF"></a-light>
+        <a-entity id="target" mindar-image-target="targetIndex: 0" ar-controller
+            smooth-position="target: #videooverlay; factor: 0.1">
+            <a-plane id="videooverlay" height="0.8"
+                material="src: #video; opacity: 0; transparent: false; alphaTest: 0.5"
+                animation__fadein="startEvents: fadein; property: material.opacity; from: 0; to: 1; dur: 500;"
+                animation__fadeout="startEvents: fadeout; property: material.opacity; from: 1; to: 0; dur: 500;"></a-plane>
+        </a-entity>
+    </a-scene>
+</body>
+
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
